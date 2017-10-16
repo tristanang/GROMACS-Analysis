@@ -1,0 +1,149 @@
+import sys
+import re
+import lipid as lib
+import numpy as np
+from math import sqrt
+from math import pi
+import matplotlib.pyplot as plt
+
+#"preprocessor"
+		
+NDIM = 3
+DR = 0.02
+dt = 0.02
+Nchunks = 1 #with this number
+"""
+#Arguments of script
+if len(sys.argv) != 5:
+    print("You need five arguments")
+    print("Trajectory File")
+    print("Number of Configurations")
+    print("Logarithmic Block Size")
+    print("Cholesterol Topology File")
+    exit()
+
+trajFileName = sys.argv[1]
+Nconf = int(sys.argv[2])
+nlog = int(sys.argv[3])
+topology = sys.argv[4]
+
+"""
+trajFileName = "temp20"
+Nconf = 46
+nlog = 46
+topology = "20chol.top"
+
+
+#Initializing the parameters
+Nchol = lib.cholConc(topology)
+N,L,x,y = lib.processTraj(trajFileName,Nchol,NDIM,Nconf)
+
+Nperlipid = 12
+Nperchol = 8
+Nlipids = (N - Nperchol * Nchol) // Nperlipid
+Ncholbeads = Nchol * Nperchol
+Nlipidbeads = Nlipids * Nperlipid
+
+#Translating z-axis
+x,y = lib.translateZ(x,y)
+
+#COM MASSING
+com_lipids = lib.comassing(x,"DPPC",L)
+com_chol = lib.comassing(y,"CHOL",L)
+del x,y
+
+#Particle Class
+p_lipids = [0 for i in range(Nlipids)]
+p_chol = [0 for i in range(Nchol)]
+
+for i in range(Nlipids):
+    p_lipids[i] = lib.Particle_d(com_lipids[i],L)
+for i in range(Nchol):
+    p_chol[i] = lib.Particle_d(com_chol[i],L)
+
+for t in range(Nconf):
+    if t%nlog == 0: #starting block check
+        frontblock = t
+    elif (t%nlog)%10 == 0 or t%nlog == (nlog - 1):
+            for i in range(Nlipids):
+                p_lipids[i].calcS(t,frontblock,L)
+            for i in range(Nchol):
+                p_chol[i].calcS(t,frontblock,L)
+
+lipid_gr = np.zeros([5,Nchunks,int(L[0][0]/DR)],int) #5 is sensitive because I look at 5 times in a block
+cross_gr =  np.zeros([5,Nchunks,int(L[0][0]/DR)],int)
+r = [0,0]
+lipid_pair = np.zeros([Nchunks])
+cross_pair = np.zeros([Nchunks])
+#NORM
+                
+for t in range(Nconf):
+    if t%nlog == 0:
+        frontblock = t
+        confCount = 0
+    elif (t%nlog)%10 == 0 or t%nlog == (nlog - 1):
+        #p_lipids = sorted(p_lipids, key = lambda x: x.getS(t))
+        #p_chol = sorted()
+        
+        chunkGen = lib.chunks(p_lipids,Nchunks)
+        chunkCount = 0
+        for chunk in chunkGen:
+            for i in range(len(chunk)):
+                for j in range(i+1,len(chunk)):
+                    if chunk[i].pos[2][t]*chunk[j].pos[2][t] > 0:
+                        
+                        for k in range(NDIM-1):
+                            r[k] = chunk[i].pos[k][t] - chunk[j].pos[k][t]
+                            r[k] = lib.periodic(r[k],L[k][t])
+                            
+                        r2 = sqrt(r[0]*r[0] + r[1]*r[1])
+                        lipid_gr[confCount][chunkCount][int(r2/DR)] += 1
+                        lipid_pair[chunkCount] += 1
+                        
+            for i in range(len(chunk)):
+                
+                #cross_pair[chunkCount] = Nchol*len(chunk)
+                
+                """
+                for j in range(Nchol):
+                    for k in range(NDIM-1):
+                        r[k] = chunk[i].pos[k][t] - p_chol[j].pos[k][t]
+                        r[k] = lib.periodic(r[k],L[k][t])
+                    r2 = sqrt(r[0]*r[0] + r[1]*r[1])
+                    cross_gr[confCount][chunkCount][int(r2/DR)] += 1
+                """
+        
+            chunkCount += 1
+            
+        confCount += 1
+
+#printing
+lipid_norm = np.zeros([Nchunks])
+cross_norm = np.zeros([Nchunks])
+L_ave = [np.mean(L[0]),np.mean(L[1])]
+
+for i in range(Nchunks):
+    lipid_norm[i] = lipid_pair[i] * pi * DR / 2.
+    lipid_norm[i] = L_ave[0]*L_ave[1]/(4*lipid_norm[i])
+    #cross_norm[i] = cross_pair[i] * pi * DR /2.
+    #cross_norm[i] = L_ave[0]*L_ave[1]/(4*chol_norm[i])
+
+for i in range(5):
+    for j in range(Nchunks):
+        lipidFile = open("gr_m_lipids_t="+str(i)+"_speed="+str(j)+".dat",'w')
+        for step in range(len(lipid_gr[i][j])//2):
+            lipidFile.write(str((step+0.5)*DR)+" "+str(lipid_norm[j]*lipid_gr[i][j][step]/((step+0.5)*DR))+"\n")
+        lipidFile.close()
+        """
+        cholFile = open("gr_m_cross_t="+str(i)+"_speed="+str(j)+".dat",'w')
+        for step in range(len(cross_gr[i][j])):
+            cholFile.write(str((step+0.5)*DR)+" "+str(cross_norm[j]*cross_gr[i][j][step]/((step+0.5)*DR))+"\n")       
+        cholFile.close()
+        """
+                
+                
+                
+                
+                
+                
+                
