@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 NDIM = 3
 DR = 0.02
 dt = 0.02
+confGroups = 5
 Nchunks = 1 #with this number
 """
 #Arguments of script
@@ -73,13 +74,12 @@ for t in range(Nconf):
 lipid_gr = np.zeros([5,Nchunks,int(L[0][0]/DR)],int) #5 is sensitive because I look at 5 times in a block
 cross_gr =  np.zeros([5,Nchunks,int(L[0][0]/DR)],int)
 r = [0,0]
-lipid_pair = np.zeros([Nchunks])
-cross_pair = np.zeros([Nchunks])
+lipid_pair = np.zeros([5,Nchunks])
+cross_pair = np.zeros([5,Nchunks])
 #NORM
                 
 for t in range(Nconf):
     if t%nlog == 0:
-        frontblock = t
         confCount = 0
     elif (t%nlog)%10 == 0 or t%nlog == (nlog - 1):
         #p_lipids = sorted(p_lipids, key = lambda x: x.getS(t))
@@ -98,7 +98,7 @@ for t in range(Nconf):
                             
                         r2 = sqrt(r[0]*r[0] + r[1]*r[1])
                         lipid_gr[confCount][chunkCount][int(r2/DR)] += 1
-                        lipid_pair[chunkCount] += 1
+                        lipid_pair[confCount][chunkCount] += 1
                         
             for i in range(len(chunk)):
                 
@@ -116,23 +116,25 @@ for t in range(Nconf):
             chunkCount += 1
             
         confCount += 1
+        confCount % 5
 
 #printing
-lipid_norm = np.zeros([Nchunks])
-cross_norm = np.zeros([Nchunks])
+lipid_norm = np.zeros([5,Nchunks])
+cross_norm = np.zeros([5,Nchunks])
 L_ave = [np.mean(L[0]),np.mean(L[1])]
 
-for i in range(Nchunks):
-    lipid_norm[i] = lipid_pair[i] * pi * DR / 2.
-    lipid_norm[i] = L_ave[0]*L_ave[1]/(4*lipid_norm[i])
-    #cross_norm[i] = cross_pair[i] * pi * DR /2.
-    #cross_norm[i] = L_ave[0]*L_ave[1]/(4*chol_norm[i])
+for i in range(confGroups):
+    for j in range(Nchunks):
+        lipid_norm[i][j] = lipid_pair[i][j] * pi * DR / 2.
+        lipid_norm[i][j] = L_ave[0]*L_ave[1]/(4*lipid_norm[i][j])
+        #cross_norm[i] = cross_pair[i] * pi * DR /2.
+        #cross_norm[i] = L_ave[0]*L_ave[1]/(4*chol_norm[i])
 
 for i in range(5):
     for j in range(Nchunks):
         lipidFile = open("gr_m_lipids_t="+str(i)+"_speed="+str(j)+".dat",'w')
         for step in range(len(lipid_gr[i][j])//2):
-            lipidFile.write(str((step+0.5)*DR)+" "+str(lipid_norm[j]*lipid_gr[i][j][step]/((step+0.5)*DR))+"\n")
+            lipidFile.write(str((step+0.5)*DR)+" "+str(lipid_norm[i][j]*lipid_gr[i][j][step]/((step+0.5)*DR))+"\n")
         lipidFile.close()
         """
         cholFile = open("gr_m_cross_t="+str(i)+"_speed="+str(j)+".dat",'w')
