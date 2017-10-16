@@ -12,7 +12,7 @@ NDIM = 3
 DR = 0.02
 dt = 0.02
 confGroups = 5
-Nchunks = 1 #with this number
+Nchunks = 10 #with this number
 """
 #Arguments of script
 if len(sys.argv) != 5:
@@ -30,7 +30,7 @@ topology = sys.argv[4]
 
 """
 trajFileName = "temp20"
-Nconf = 46
+Nconf = 92
 nlog = 46
 topology = "20chol.top"
 
@@ -71,11 +71,11 @@ for t in range(Nconf):
             for i in range(Nchol):
                 p_chol[i].calcS(t,frontblock,L)
 
-lipid_gr = np.zeros([5,Nchunks,int(L[0][0]/DR)],int) #5 is sensitive because I look at 5 times in a block
-cross_gr =  np.zeros([5,Nchunks,int(L[0][0]/DR)],int)
+lipid_gr = np.zeros([confGroups,Nchunks,int(L[0][0]/DR)],int) #5 is sensitive because I look at 5 times in a block
+cross_gr =  np.zeros([confGroups,Nchunks,int(L[0][0]/DR)],int)
 r = [0,0]
-lipid_pair = np.zeros([5,Nchunks])
-cross_pair = np.zeros([5,Nchunks])
+lipid_pair = np.zeros([confGroups,Nchunks])
+cross_pair = np.zeros([confGroups,Nchunks])
 #NORM
                 
 for t in range(Nconf):
@@ -116,11 +116,11 @@ for t in range(Nconf):
             chunkCount += 1
             
         confCount += 1
-        confCount % 5
+        confCount % confGroups
 
 #printing
-lipid_norm = np.zeros([5,Nchunks])
-cross_norm = np.zeros([5,Nchunks])
+lipid_norm = np.zeros([confGroups,Nchunks])
+cross_norm = np.zeros([confGroups,Nchunks])
 L_ave = [np.mean(L[0]),np.mean(L[1])]
 
 for i in range(confGroups):
@@ -130,7 +130,7 @@ for i in range(confGroups):
         #cross_norm[i] = cross_pair[i] * pi * DR /2.
         #cross_norm[i] = L_ave[0]*L_ave[1]/(4*chol_norm[i])
 
-for i in range(5):
+for i in range(confGroups):
     for j in range(Nchunks):
         lipidFile = open("gr_m_lipids_t="+str(i)+"_speed="+str(j)+".dat",'w')
         for step in range(len(lipid_gr[i][j])//2):
