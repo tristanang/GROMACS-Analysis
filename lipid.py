@@ -73,7 +73,7 @@ def comassing(ar,bead,L=None):
     if bead == "DPPC":
         size = 12
         center = 2
-        ##3rd bead but zero indexed
+        #3rd bead but zero indexed
     elif bead == "CHOL":
         size = 8
         center = 4
@@ -143,21 +143,21 @@ def translateZ(x,y):
     return x,y
 
 class Particle_d: #very specific to the displacement code
-    def __init__(self,com,L=None):
+    def __init__(self,com):
         NDIM = len(com)
         Nconf = len(com[0])
         #nlin = Nconf/nlog
         self.pos = com
-        self.dr = np.zeros([NDIM,Nconf])
+        #self.dr = np.zeros([NDIM,Nconf])
         self.s = np.zeros([Nconf])
 
     def calcS(self,t,frontblock,L):
         NDIM = len(self.pos)
+        dr = [0,0,0]
         for k in range(NDIM):
-            d_r = self.pos[k][t] - self.pos[k][frontblock]
-            d_r = periodic(d_r,L[k][t])
-            self.dr[k][t] = d_r
-        self.s[t] = sqrt(self.dr[0][t]**2+self.dr[1][t]**2)
+            dr[k] = self.pos[k][t] - self.pos[k][frontblock]
+            dr[k] = periodic(dr[k],L[k][t])
+        self.s[t] = sqrt(dr[0]**2+dr[1]**2)
     
     def getS(self,t):
         return self.s[t]

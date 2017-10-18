@@ -12,7 +12,7 @@ NDIM = 3
 DR = 0.02
 dt = 0.02
 confGroups = 5
-Nchunks = 10 #with this number
+Nchunks = 1 #with this number
 """
 #Arguments of script
 if len(sys.argv) != 5:
@@ -58,31 +58,33 @@ p_lipids = [0 for i in range(Nlipids)]
 p_chol = [0 for i in range(Nchol)]
 
 for i in range(Nlipids):
-    p_lipids[i] = lib.Particle_d(com_lipids[i],L)
+    p_lipids[i] = lib.Particle_d(com_lipids[i])
 for i in range(Nchol):
-    p_chol[i] = lib.Particle_d(com_chol[i],L)
+    p_chol[i] = lib.Particle_d(com_chol[i])
 
+del com_lipids, com_chol 
+ 
 for t in range(Nconf):
     if t%nlog == 0: #starting block check
         frontblock = t
     elif (t%nlog)%10 == 0 or t%nlog == (nlog - 1):
             for i in range(Nlipids):
                 p_lipids[i].calcS(t,frontblock,L)
-            for i in range(Nchol):
-                p_chol[i].calcS(t,frontblock,L)
+            #for i in range(Nchol):
+                #p_chol[i].calcS(t,frontblock,L)
 
-lipid_gr = np.zeros([confGroups,Nchunks,int(L[0][0]/DR)],int) #5 is sensitive because I look at 5 times in a block
+lipid_gr = np.zeros([confGroups,Nchunks,int(L[0][0]/DR)],int)
 cross_gr =  np.zeros([confGroups,Nchunks,int(L[0][0]/DR)],int)
 r = [0,0]
 lipid_pair = np.zeros([confGroups,Nchunks])
 cross_pair = np.zeros([confGroups,Nchunks])
-#NORM
                 
 for t in range(Nconf):
     if t%nlog == 0:
+        frontblock = t
         confCount = 0
     elif (t%nlog)%10 == 0 or t%nlog == (nlog - 1):
-        #p_lipids = sorted(p_lipids, key = lambda x: x.getS(t))
+        p_lipids = sorted(p_lipids, key = lambda x: x.getS(t))
         #p_chol = sorted()
         
         chunkGen = lib.chunks(p_lipids,Nchunks)
@@ -90,33 +92,31 @@ for t in range(Nconf):
         for chunk in chunkGen:
             for i in range(len(chunk)):
                 for j in range(i+1,len(chunk)):
-                    if chunk[i].pos[2][t]*chunk[j].pos[2][t] > 0:
+                    if chunk[i].pos[2][frontblock]*chunk[j].pos[2][frontblock] > 0:
                         
                         for k in range(NDIM-1):
-                            r[k] = chunk[i].pos[k][t] - chunk[j].pos[k][t]
-                            r[k] = lib.periodic(r[k],L[k][t])
+                            r[k] = chunk[i].pos[k][frontblock] - chunk[j].pos[k][frontblock]
+                            r[k] = lib.periodic(r[k],L[k][frontblock])
                             
                         r2 = sqrt(r[0]*r[0] + r[1]*r[1])
                         lipid_gr[confCount][chunkCount][int(r2/DR)] += 1
                         lipid_pair[confCount][chunkCount] += 1
                         
             for i in range(len(chunk)):
-                
-                #cross_pair[chunkCount] = Nchol*len(chunk)
-                
-                """
                 for j in range(Nchol):
-                    for k in range(NDIM-1):
-                        r[k] = chunk[i].pos[k][t] - p_chol[j].pos[k][t]
-                        r[k] = lib.periodic(r[k],L[k][t])
-                    r2 = sqrt(r[0]*r[0] + r[1]*r[1])
-                    cross_gr[confCount][chunkCount][int(r2/DR)] += 1
-                """
-        
+                    if chunk[i].pos[2][frontblock]*p_chol[j].pos[2][frontblock] > 0:
+                        for k in range(NDIM-1):
+                            r[k] = chunk[i].pos[k][frontblock] - p_chol[j].pos[k][frontblock]
+                            r[k] = lib.periodic(r[k],L[k][frontblock])
+                            
+                        r2 = sqrt(r[0]*r[0] + r[1]*r[1])
+                        cross_gr[confCount][chunkCount][int(r2/DR)] += 1
+                        cross_pair[confCount][chunkCount] += 1
+                
             chunkCount += 1
             
         confCount += 1
-        confCount % confGroups
+        confCount %= confGroups
 
 #printing
 lipid_norm = np.zeros([confGroups,Nchunks])
@@ -127,8 +127,8 @@ for i in range(confGroups):
     for j in range(Nchunks):
         lipid_norm[i][j] = lipid_pair[i][j] * pi * DR / 2.
         lipid_norm[i][j] = L_ave[0]*L_ave[1]/(4*lipid_norm[i][j])
-        #cross_norm[i] = cross_pair[i] * pi * DR /2.
-        #cross_norm[i] = L_ave[0]*L_ave[1]/(4*chol_norm[i])
+        cross_norm[i] = cross_pair[i][j] * pi * DR /2.
+        cross_norm[i] = L_ave[0]*L_ave[1]/(4*cross_norm[i][j])
 
 for i in range(confGroups):
     for j in range(Nchunks):
@@ -136,12 +136,12 @@ for i in range(confGroups):
         for step in range(len(lipid_gr[i][j])//2):
             lipidFile.write(str((step+0.5)*DR)+" "+str(lipid_norm[i][j]*lipid_gr[i][j][step]/((step+0.5)*DR))+"\n")
         lipidFile.close()
-        """
+        
         cholFile = open("gr_m_cross_t="+str(i)+"_speed="+str(j)+".dat",'w')
-        for step in range(len(cross_gr[i][j])):
-            cholFile.write(str((step+0.5)*DR)+" "+str(cross_norm[j]*cross_gr[i][j][step]/((step+0.5)*DR))+"\n")       
+        for step in range(len(cross_gr[i][j])//2):
+            cholFile.write(str((step+0.5)*DR)+" "+str(cross_norm[i][j]*cross_gr[i][j][step]/((step+0.5)*DR))+"\n")       
         cholFile.close()
-        """
+        
                 
                 
                 
