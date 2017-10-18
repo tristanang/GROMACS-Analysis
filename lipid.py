@@ -72,11 +72,11 @@ def processTraj(trajFileName,Nchol,NDIM,Nconf):
 def comassing(ar,bead,L=None):
     if bead == "DPPC":
         size = 12
-        center = 2
+        #center = 2
         #3rd bead but zero indexed
     elif bead == "CHOL":
         size = 8
-        center = 4
+        #center = 4
     else:
         print("bead type error")
 
@@ -93,7 +93,7 @@ def comassing(ar,bead,L=None):
                 
                 #comAr[i][k][t] = ar[ii+center][k][t]
                 
-                for j in range(1,size):
+                for j in range(size): #where's the 0 bead
                     ar[ii+j][k][t] = periodic_p(ar[ii+j][k][t],ar[ii][k][t],L[k][t])
                     #fix your boundary condition
                     #look at structure factor
