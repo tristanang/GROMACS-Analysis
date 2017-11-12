@@ -1,6 +1,6 @@
 import sys
 import re
-import lipid as lib
+import lipid_cy as lib
 import numpy as np
 from math import sqrt
 from math import pi
@@ -145,12 +145,7 @@ for i in range(confGroups):
             cholFile.write(str((step+0.5)*DR)+" "+str(cross_norm[i][j]*cross_gr[i][j][step]/((step+0.5)*DR))+"\n")       
         cholFile.close()
         
-def index(a, x):
-    'Locate the leftmost value exactly equal to x'
-    i = bisect_left(a, x)
-    if i != len(a) and a[i] == x:
-        return i
-    raise ValueError
+
                 
                 
                 
